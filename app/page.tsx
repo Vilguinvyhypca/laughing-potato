@@ -17,6 +17,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [selected, setSelected] = useState<MediaItem | null>(null);
+  const [playing, setPlaying] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -63,6 +64,17 @@ export default function Home() {
   const signOut = async () => {
     await fetch("/api/jellyfin/login", { method: "DELETE" });
     setLibrary({ authenticated: false, items: [] });
+    setSelected(null);
+    setPlaying(false);
+  };
+
+  const openItem = (item: MediaItem, play = false) => {
+    setSelected(item);
+    setPlaying(play && ["Movie", "Episode", "Video"].includes(item.type));
+  };
+
+  const closeItem = () => {
+    setPlaying(false);
     setSelected(null);
   };
 
@@ -116,7 +128,7 @@ export default function Home() {
             <p className="kicker">Recently added · {featured.type}</p><h1>{featured.name}</h1>
             <div className="meta-row"><span>{featured.year ?? "New"}</span>{featured.rating && <span>★ {featured.rating.toFixed(1)}</span>}{featured.runtimeMinutes && <span>{featured.runtimeMinutes} min</span>}</div>
             <p>{featured.overview || "A new addition to your private collection."}</p>
-            <button onClick={() => setSelected(featured)}>View details <span>↗</span></button>
+            <button onClick={() => openItem(featured, true)}>{["Movie", "Episode", "Video"].includes(featured.type) ? "Play now" : "View details"} <span>▶</span></button>
           </div><a className="down-cue" href="#library">Browse library ↓</a>
         </section>
       )}
@@ -127,13 +139,14 @@ export default function Home() {
           <label className="search-label">Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title or series" /></label>
         </div>
         {visibleItems.length ? <div className="media-grid">{visibleItems.map((item) => (
-          <button className="media-card" key={item.id} onClick={() => setSelected(item)}>
+          <button className="media-card" key={item.id} onClick={() => openItem(item, true)}>
             <div className="poster">{item.imageTag ? <img src={`/api/jellyfin/image?itemId=${item.id}&tag=${item.imageTag}`} alt="" loading="lazy" /> : <div className="poster-fallback">{item.name.slice(0, 1)}</div>}<span className="media-type">{item.type}</span></div>
             <span className="media-name">{item.name}</span><span className="media-subtitle">{item.seriesName ?? item.year ?? "In your collection"}</span>
           </button>
         ))}</div> : <div className="empty-state"><strong>No titles found.</strong><p>Try another filter or search.</p></div>}
       </section>
-      {selected && <div className="detail-modal" role="dialog" aria-modal="true" aria-label={selected.name} onClick={() => setSelected(null)}><article onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setSelected(null)} aria-label="Close details">×</button>{selected.imageTag && <img src={`/api/jellyfin/image?itemId=${selected.id}&tag=${selected.imageTag}`} alt="" />}<div><p className="kicker">{selected.type}</p><h2>{selected.name}</h2><div className="meta-row"><span>{selected.year ?? "New"}</span>{selected.rating && <span>★ {selected.rating.toFixed(1)}</span>}{selected.runtimeMinutes && <span>{selected.runtimeMinutes} min</span>}</div><p>{selected.overview || "No description is available for this title."}</p></div></article></div>}
+      {selected && <div className="detail-modal" role="dialog" aria-modal="true" aria-label={selected.name} onClick={closeItem}><article className={playing ? "is-playing" : ""} onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={closeItem} aria-label="Close player">×</button>{playing ? <video className="movie-player" src={`/api/jellyfin/stream?itemId=${selected.id}`} controls autoPlay playsInline /> : selected.imageTag && <img src={`/api/jellyfin/image?itemId=${selected.id}&tag=${selected.imageTag}`} alt="" />}<div><p className="kicker">{selected.type}</p><h2>{selected.name}</h2><div className="meta-row"><span>{selected.year ?? "New"}</span>{selected.rating && <span>★ {selected.rating.toFixed(1)}</span>}{selected.runtimeMinutes && <span>{selected.runtimeMinutes} min</span>}</div>{!playing && ["Movie", "Episode", "Video"].includes(selected.type) && <button className="play-button" onClick={() => setPlaying(true)}>Play movie <span>▶</span></button>}<p>{selected.overview || "No description is available for this title."}</p></div></article></div>}
     </main>
   );
 }
+
