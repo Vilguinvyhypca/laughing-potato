@@ -1,181 +1,152 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-const archive = [
-  { src: "/gallery/icd218.jpg", label: "Archive 218" },
-  { src: "/gallery/icd231.jpg", label: "Archive 231" },
-  { src: "/gallery/icd258.jpg", label: "Archive 258" },
-  { src: "/gallery/icd307.jpg", label: "Archive 307" },
-  { src: "/gallery/icd341.jpg", label: "Archive 341" },
-  { src: "/gallery/icd393.jpg", label: "Archive 393" },
-  { src: "/gallery/icd404.jpg", label: "Archive 404" },
-  { src: "/gallery/icd416.jpg", label: "Archive 416" },
-];
+type MediaItem = { id: string; name: string; type: string; overview: string; year: number | null; rating: number | null; runtimeMinutes: number | null; seriesName: string | null; imageTag: string | null };
+type LibraryResponse = { authenticated: boolean; userName?: string; total?: number; items: MediaItem[] };
+type ServerStatus = { connected: boolean; serverName: string | null; version: string | null };
+
+const filters = ["All", "Movie", "Series", "Episode", "Video"];
 
 export default function Home() {
-  const [ageState, setAgeState] = useState<"checking" | "gate" | "accepted" | "blocked">("checking");
-  const [muted, setMuted] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selected, setSelected] = useState<(typeof archive)[number] | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const [status, setStatus] = useState<ServerStatus | null>(null);
+  const [library, setLibrary] = useState<LibraryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [selected, setSelected] = useState<MediaItem | null>(null);
+  const [playing, setPlaying] = useState(false);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setAgeState(window.localStorage.getItem("hyme-age-confirmed") === "yes" ? "accepted" : "gate");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = selected ? "hidden" : "";
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelected(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [selected]);
-
-  const acceptAge = () => {
-    window.localStorage.setItem("hyme-age-confirmed", "yes");
-    setAgeState("accepted");
+  const refresh = async () => {
+    setLoading(true);
+    const [statusResponse, libraryResponse] = await Promise.all([
+      fetch("/api/jellyfin/status", { cache: "no-store" }),
+      fetch("/api/jellyfin/library", { cache: "no-store" }),
+    ]);
+    setStatus(await statusResponse.json());
+    setLibrary(libraryResponse.ok ? await libraryResponse.json() : { authenticated: false, items: [] });
+    setLoading(false);
   };
 
-  const toggleSound = async () => {
-    const video = [videoRef.current, mobileVideoRef.current].find(
-      (item) => item && window.getComputedStyle(item).display !== "none",
-    );
-    if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-    if (video.paused) await video.play().catch(() => undefined);
+  useEffect(() => { void refresh(); }, []);
+
+  const visibleItems = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return (library?.items ?? []).filter((item) => {
+      const matchesFilter = filter === "All" || item.type === filter;
+      const matchesQuery = !normalized || `${item.name} ${item.seriesName ?? ""}`.toLowerCase().includes(normalized);
+      return matchesFilter && matchesQuery;
+    });
+  }, [filter, library, query]);
+
+  const signIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSigningIn(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/jellyfin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: form.get("username"), password: form.get("password") }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.error ?? "Unable to sign in.");
+      setSigningIn(false);
+      return;
+    }
+    await refresh();
+    setSigningIn(false);
   };
 
-  if (ageState === "checking") return <main className="gate-shell" aria-label="Loading" />;
+  const signOut = async () => {
+    await fetch("/api/jellyfin/login", { method: "DELETE" });
+    setLibrary({ authenticated: false, items: [] });
+    setSelected(null);
+    setPlaying(false);
+  };
 
-  if (ageState !== "accepted") {
+  const openItem = (item: MediaItem, play = false) => {
+    setSelected(item);
+    setPlaying(play && ["Movie", "Episode", "Video"].includes(item.type));
+  };
+
+  const closeItem = () => {
+    setPlaying(false);
+    setSelected(null);
+  };
+
+  if (loading) return <main className="loading-shell"><div className="loading-mark">H</div><p>Connecting to your cinema…</p></main>;
+
+  if (!status?.connected || !library?.authenticated) {
     return (
-      <main className="gate-shell">
-        <div className="gate-card">
-          <img className="gate-logo" src="/media/logo.png" alt="Hymecymeyseh" />
-          {ageState === "gate" ? (
-            <>
-              <p className="eyebrow">Private visual lounge</p>
-              <h1>Adults only</h1>
-              <p className="gate-copy">
-                This site contains mature visual material. By entering, you confirm that you are at least 18 years old and that viewing this content is legal where you live.
-              </p>
-              <div className="gate-actions">
-                <button className="button button-primary" onClick={acceptAge}>I am 18 or older</button>
-                <button className="button button-quiet" onClick={() => setAgeState("blocked")}>I am under 18</button>
-              </div>
-              <p className="privacy-note">No tracking or session recording is used on this page.</p>
-            </>
+      <main className="connect-shell">
+        <section className="connect-art" aria-hidden="true">
+          <div className="film-strip film-strip-one" /><div className="film-strip film-strip-two" />
+          <div className="connect-wordmark">HYME</div><p>Your private cinema,<br />curated at home.</p>
+        </section>
+        <section className="connect-panel">
+          <a className="mini-brand" href="/">HYMECYMEYSEH <span>MEDIA</span></a>
+          <div className="connect-copy">
+            <div className={status?.connected ? "status-chip online" : "status-chip offline"}><span /> {status?.connected ? `${status.serverName} online` : "Server link unavailable"}</div>
+            <p className="kicker">Jellyfin collection</p>
+            <h1>Everything you love,<br /><em>beautifully arranged.</em></h1>
+            <p className="lede">Sign in with your Jellyfin account. Your password travels only to your private server and is never stored by this app.</p>
+          </div>
+          {status?.connected ? (
+            <form className="login-form" onSubmit={signIn}>
+              <label>Username<input name="username" autoComplete="username" required /></label>
+              <label>Password<input name="password" type="password" autoComplete="current-password" /></label>
+              {error && <p className="form-error" role="alert">{error}</p>}
+              <button type="submit" disabled={signingIn}>{signingIn ? "Opening library…" : "Enter your library"}<span>→</span></button>
+            </form>
           ) : (
-            <>
-              <p className="eyebrow">Access unavailable</p>
-              <h1>Please close this page.</h1>
-              <p className="gate-copy">This experience is only available to adults.</p>
-            </>
+            <div className="connection-help"><strong>Your web app is ready for Jellyfin.</strong><p>Keep Jellyfin running on this computer, then connect the private server link in Sites to make it available here.</p></div>
           )}
-        </div>
+          <footer className="connect-footer">Private by design · Powered by Jellyfin</footer>
+        </section>
       </main>
     );
   }
 
+  const featured = visibleItems.find((item) => item.imageTag) ?? visibleItems[0];
+
   return (
-    <main>
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="Hymecymeyseh home">
-          <img src="/media/logo.png" alt="Hymecymeyseh" />
-        </a>
-        <button
-          className="menu-toggle"
-          type="button"
-          aria-expanded={menuOpen}
-          aria-controls="site-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? "Close" : "Menu"}
-        </button>
-        <nav id="site-navigation" className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-          <a href="#top" onClick={() => setMenuOpen(false)}>Home</a>
-          <a href="#archive" onClick={() => setMenuOpen(false)}>Archive</a>
-          <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
-        </nav>
-        <button className="sound-toggle" type="button" onClick={toggleSound} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
-          <span aria-hidden="true">{muted ? "◖" : "◕"}</span>
-          {muted ? "Sound off" : "Sound on"}
-        </button>
+    <main className="library-shell" id="top">
+      <header className="library-header">
+        <a className="mini-brand" href="#top">HYMECYMEYSEH <span>MEDIA</span></a>
+        <nav aria-label="Library navigation"><a href="#featured">Featured</a><a href="#library">Library</a></nav>
+        <div className="account"><span>{library.userName}</span><button onClick={signOut}>Sign out</button></div>
       </header>
-
-      <section className="hero" id="top" aria-labelledby="hero-title">
-        <video ref={videoRef} className="hero-video hero-video-desktop" autoPlay muted loop playsInline preload="metadata" poster="/media/poster-desktop.jpg" aria-hidden="true">
-          <source src="/media/hero-desktop.mp4" type="video/mp4" />
-        </video>
-        <video ref={mobileVideoRef} className="hero-video hero-video-mobile" autoPlay muted loop playsInline preload="metadata" poster="/media/poster-mobile.jpg" aria-hidden="true">
-          <source src="/media/hero-mobile.mp4" type="video/mp4" />
-        </video>
-        <div className="hero-shade" />
-        <div className="hero-content">
-          <p className="eyebrow">Welcome to Hymecymeyseh</p>
-          <h1 id="hero-title">We are here to just have <span>fun.</span></h1>
-          <p className="hero-copy">A moving archive of vivid images, curious moments, and playful visual experiments.</p>
-          <div className="hero-actions">
-            <a className="button button-primary" href="#archive">Enter the archive</a>
-            <a className="text-link" href="#about">Discover the idea <span aria-hidden="true">↘</span></a>
-          </div>
-        </div>
-        <a className="scroll-cue" href="#archive" aria-label="Scroll to archive">Scroll <span aria-hidden="true">↓</span></a>
-      </section>
-
-      <section className="archive-section" id="archive" aria-labelledby="archive-title">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Selected files</p>
-            <h2 id="archive-title">The archive</h2>
-          </div>
-          <p>Eight pieces from the original Hymecymeyseh collection. Select any image for a closer look.</p>
-        </div>
-        <div className="archive-grid">
-          {archive.map((item, index) => (
-            <button className="archive-card" key={item.src} type="button" onClick={() => setSelected(item)} aria-label={`Open ${item.label}`}>
-              <img src={item.src} alt="" loading="lazy" />
-              <span className="card-number">{String(index + 1).padStart(2, "0")}</span>
-              <span className="card-label">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="about-section" id="about" aria-labelledby="about-title">
-        <p className="eyebrow">The idea</p>
-        <div className="about-grid">
-          <h2 id="about-title">Strange, playful, and impossible to scroll past.</h2>
-          <div>
-            <p>Hymecymeyseh is a visual lounge for moving images and memorable fragments. It keeps the original site&apos;s experimental energy while making the experience easier to explore on every screen.</p>
-            <a className="text-link" href="#top">Back to the beginning <span aria-hidden="true">↑</span></a>
-          </div>
-        </div>
-      </section>
-
-      <footer>
-        <img src="/media/logo.png" alt="Hymecymeyseh" />
-        <p>Adults only · Please view responsibly</p>
-        <p>© {new Date().getFullYear()} Hymecymeyseh</p>
-      </footer>
-
-      {selected && (
-        <div className="lightbox" role="dialog" aria-modal="true" aria-label={selected.label} onClick={() => setSelected(null)}>
-          <button className="lightbox-close" type="button" onClick={() => setSelected(null)} aria-label="Close image">Close ×</button>
-          <img src={selected.src} alt={selected.label} onClick={(event) => event.stopPropagation()} />
-          <p>{selected.label}</p>
-        </div>
+      {featured && (
+        <section className="featured" id="featured">
+          {featured.imageTag && <img src={`/api/jellyfin/image?itemId=${featured.id}&tag=${featured.imageTag}`} alt="" />}
+          <div className="featured-shade" />
+          <div className="featured-copy">
+            <p className="kicker">Recently added · {featured.type}</p><h1>{featured.name}</h1>
+            <div className="meta-row"><span>{featured.year ?? "New"}</span>{featured.rating && <span>★ {featured.rating.toFixed(1)}</span>}{featured.runtimeMinutes && <span>{featured.runtimeMinutes} min</span>}</div>
+            <p>{featured.overview || "A new addition to your private collection."}</p>
+            <button onClick={() => openItem(featured, true)}>{["Movie", "Episode", "Video"].includes(featured.type) ? "Play now" : "View details"} <span>▶</span></button>
+          </div><a className="down-cue" href="#library">Browse library ↓</a>
+        </section>
       )}
+      <section className="media-library" id="library">
+        <div className="library-title"><div><p className="kicker">Personal collection</p><h2>Your library</h2></div><p>{library.total ?? visibleItems.length} titles available from {status.serverName}</p></div>
+        <div className="library-controls">
+          <div className="filter-row" role="group" aria-label="Filter media">{filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div>
+          <label className="search-label">Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title or series" /></label>
+        </div>
+        {visibleItems.length ? <div className="media-grid">{visibleItems.map((item) => (
+          <button className="media-card" key={item.id} onClick={() => openItem(item, true)}>
+            <div className="poster">{item.imageTag ? <img src={`/api/jellyfin/image?itemId=${item.id}&tag=${item.imageTag}`} alt="" loading="lazy" /> : <div className="poster-fallback">{item.name.slice(0, 1)}</div>}<span className="media-type">{item.type}</span></div>
+            <span className="media-name">{item.name}</span><span className="media-subtitle">{item.seriesName ?? item.year ?? "In your collection"}</span>
+          </button>
+        ))}</div> : <div className="empty-state"><strong>No titles found.</strong><p>Try another filter or search.</p></div>}
+      </section>
+      {selected && <div className="detail-modal" role="dialog" aria-modal="true" aria-label={selected.name} onClick={closeItem}><article className={playing ? "is-playing" : ""} onClick={(event) => event.stopPropagation()}><button className="modal-close" onClick={closeItem} aria-label="Close player">×</button>{playing ? <video className="movie-player" src={`/api/jellyfin/stream?itemId=${selected.id}`} controls autoPlay playsInline /> : selected.imageTag && <img src={`/api/jellyfin/image?itemId=${selected.id}&tag=${selected.imageTag}`} alt="" />}<div><p className="kicker">{selected.type}</p><h2>{selected.name}</h2><div className="meta-row"><span>{selected.year ?? "New"}</span>{selected.rating && <span>★ {selected.rating.toFixed(1)}</span>}{selected.runtimeMinutes && <span>{selected.runtimeMinutes} min</span>}</div>{!playing && ["Movie", "Episode", "Video"].includes(selected.type) && <button className="play-button" onClick={() => setPlaying(true)}>Play movie <span>▶</span></button>}<p>{selected.overview || "No description is available for this title."}</p></div></article></div>}
     </main>
   );
 }
+
