@@ -1,179 +1,317 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import catalog from "../data/catalog.json";
 
-const archive = [
-  { src: "/gallery/icd218.jpg", label: "Archive 218" },
-  { src: "/gallery/icd231.jpg", label: "Archive 231" },
-  { src: "/gallery/icd258.jpg", label: "Archive 258" },
-  { src: "/gallery/icd307.jpg", label: "Archive 307" },
-  { src: "/gallery/icd341.jpg", label: "Archive 341" },
-  { src: "/gallery/icd393.jpg", label: "Archive 393" },
-  { src: "/gallery/icd404.jpg", label: "Archive 404" },
-  { src: "/gallery/icd416.jpg", label: "Archive 416" },
-];
+type CatalogItem = {
+  slug: string;
+  title: string;
+  type: "Movie" | "Series";
+  year: number | null;
+  rating: number | null;
+  runtimeMinutes: number | null;
+  contentRating: string | null;
+  genres: string[];
+  tagline: string | null;
+  overview: string | null;
+  studio: string | null;
+  poster: string | null;
+};
+
+const visibleCatalog = (catalog.items as CatalogItem[]).filter(
+  (item) => item.poster && !item.genres.includes("Adult"),
+);
+
+function formatRuntime(minutes: number | null) {
+  if (!minutes) return null;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours}h ${remainder}m` : `${remainder}m`;
+}
+
+function metadata(item: CatalogItem) {
+  return [item.year, item.contentRating, formatRuntime(item.runtimeMinutes)]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export default function Home() {
-  const [ageState, setAgeState] = useState<"checking" | "gate" | "accepted" | "blocked">("checking");
-  const [muted, setMuted] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [selected, setSelected] = useState<(typeof archive)[number] | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const featured = useMemo(
+    () =>
+      visibleCatalog.find((item) => item.title === "Deadpool & Wolverine") ??
+      visibleCatalog.find((item) => item.overview) ??
+      visibleCatalog[0],
+    [],
+  );
+  const genres = useMemo(
+    () =>
+      Array.from(new Set(visibleCatalog.flatMap((item) => item.genres))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [],
+  );
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [genreFilter, setGenreFilter] = useState("All");
+  const [sortOrder, setSortOrder] = useState("title");
+  const [selected, setSelected] = useState<CatalogItem | null>(null);
+
+  const filteredItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const matches = visibleCatalog.filter((item) => {
+      const searchable = [
+        item.title,
+        item.overview,
+        item.studio,
+        item.year,
+        ...item.genres,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+
+      return (
+        (!normalizedQuery || searchable.includes(normalizedQuery)) &&
+        (typeFilter === "All" || item.type === typeFilter) &&
+        (genreFilter === "All" || item.genres.includes(genreFilter))
+      );
+    });
+
+    return matches.sort((a, b) => {
+      if (sortOrder === "newest") return (b.year ?? 0) - (a.year ?? 0);
+      if (sortOrder === "rating") return (b.rating ?? 0) - (a.rating ?? 0);
+      return a.title.localeCompare(b.title, undefined, { numeric: true });
+    });
+  }, [genreFilter, query, sortOrder, typeFilter]);
+
+  const clearFilters = () => {
+    setQuery("");
+    setTypeFilter("All");
+    setGenreFilter("All");
+    setSortOrder("title");
+  };
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setAgeState(window.localStorage.getItem("hyme-age-confirmed") === "yes" ? "accepted" : "gate");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = selected ? "hidden" : "";
-    const closeOnEscape = (event: KeyboardEvent) => {
+    if (!selected) return;
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setSelected(null);
     };
-    window.addEventListener("keydown", closeOnEscape);
+    document.body.classList.add("dialog-open");
+    window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", closeOnEscape);
+      document.body.classList.remove("dialog-open");
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, [selected]);
-
-  const acceptAge = () => {
-    window.localStorage.setItem("hyme-age-confirmed", "yes");
-    setAgeState("accepted");
-  };
-
-  const toggleSound = async () => {
-    const video = [videoRef.current, mobileVideoRef.current].find(
-      (item) => item && window.getComputedStyle(item).display !== "none",
-    );
-    if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-    if (video.paused) await video.play().catch(() => undefined);
-  };
-
-  if (ageState === "checking") return <main className="gate-shell" aria-label="Loading" />;
-
-  if (ageState !== "accepted") {
-    return (
-      <main className="gate-shell">
-        <div className="gate-card">
-          <img className="gate-logo" src="/media/logo.png" alt="Hymecymeyseh" />
-          {ageState === "gate" ? (
-            <>
-              <p className="eyebrow">Private visual lounge</p>
-              <h1>Adults only</h1>
-              <p className="gate-copy">
-                This site contains mature visual material. By entering, you confirm that you are at least 18 years old and that viewing this content is legal where you live.
-              </p>
-              <div className="gate-actions">
-                <button className="button button-primary" onClick={acceptAge}>I am 18 or older</button>
-                <button className="button button-quiet" onClick={() => setAgeState("blocked")}>I am under 18</button>
-              </div>
-              <p className="privacy-note">No tracking or session recording is used on this page.</p>
-            </>
-          ) : (
-            <>
-              <p className="eyebrow">Access unavailable</p>
-              <h1>Please close this page.</h1>
-              <p className="gate-copy">This experience is only available to adults.</p>
-            </>
-          )}
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Hymecymeyseh home">
-          <img src="/media/logo.png" alt="Hymecymeyseh" />
+        <a className="wordmark" href="#top" aria-label="Reelhouse home">
+          REEL<span>HOUSE</span>
         </a>
-        <button
-          className="menu-toggle"
-          type="button"
-          aria-expanded={menuOpen}
-          aria-controls="site-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? "Close" : "Menu"}
-        </button>
-        <nav id="site-navigation" className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-          <a href="#top" onClick={() => setMenuOpen(false)}>Home</a>
-          <a href="#archive" onClick={() => setMenuOpen(false)}>Archive</a>
-          <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
+        <nav aria-label="Primary navigation">
+          <a href="#catalog">Catalog</a>
+          <a href="#membership">Membership</a>
         </nav>
-        <button className="sound-toggle" type="button" onClick={toggleSound} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
-          <span aria-hidden="true">{muted ? "◖" : "◕"}</span>
-          {muted ? "Sound off" : "Sound on"}
-        </button>
+        <a className="button button-small" href="#membership">
+          View plans
+        </a>
       </header>
 
-      <section className="hero" id="top" aria-labelledby="hero-title">
-        <video ref={videoRef} className="hero-video hero-video-desktop" autoPlay muted loop playsInline preload="metadata" poster="/media/poster-desktop.jpg" aria-hidden="true">
-          <source src="/media/hero-desktop.mp4" type="video/mp4" />
-        </video>
-        <video ref={mobileVideoRef} className="hero-video hero-video-mobile" autoPlay muted loop playsInline preload="metadata" poster="/media/poster-mobile.jpg" aria-hidden="true">
-          <source src="/media/hero-mobile.mp4" type="video/mp4" />
-        </video>
+      <section
+        className="hero"
+        id="top"
+        style={{ "--hero-image": `url(${featured.poster})` } as React.CSSProperties}
+      >
         <div className="hero-shade" />
         <div className="hero-content">
-          <p className="eyebrow">Welcome to Hymecymeyseh</p>
-          <h1 id="hero-title">We are here to just have <span>fun.</span></h1>
-          <p className="hero-copy">A moving archive of vivid images, curious moments, and playful visual experiments.</p>
+          <p className="eyebrow">Now in the showcase</p>
+          <h1>{featured.title}</h1>
+          <p className="hero-meta">{metadata(featured)}</p>
+          <p className="hero-copy">
+            {featured.overview ??
+              "Explore the movies currently available in this private media collection."}
+          </p>
           <div className="hero-actions">
-            <a className="button button-primary" href="#archive">Enter the archive</a>
-            <a className="text-link" href="#about">Discover the idea <span aria-hidden="true">↘</span></a>
+            <button className="button" type="button" onClick={() => setSelected(featured)}>
+              View title
+            </button>
+            <a className="text-link" href="#catalog">
+              Browse catalog <span aria-hidden="true">↓</span>
+            </a>
           </div>
         </div>
-        <a className="scroll-cue" href="#archive" aria-label="Scroll to archive">Scroll <span aria-hidden="true">↓</span></a>
+        <p className="catalog-count">
+          <strong>{visibleCatalog.length}</strong> titles on display
+        </p>
       </section>
 
-      <section className="archive-section" id="archive" aria-labelledby="archive-title">
+      <section className="catalog-section" id="catalog">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Selected files</p>
-            <h2 id="archive-title">The archive</h2>
+            <p className="eyebrow">From the library</p>
+            <h2>Find your next watch.</h2>
           </div>
-          <p>Eight pieces from the original Hymecymeyseh collection. Select any image for a closer look.</p>
+          <p>
+            Search the collection by title, year, genre, or description. Refine the
+            results to find exactly what you want to watch next.
+          </p>
         </div>
-        <div className="archive-grid">
-          {archive.map((item, index) => (
-            <button className="archive-card" key={item.src} type="button" onClick={() => setSelected(item)} aria-label={`Open ${item.label}`}>
-              <img src={item.src} alt="" loading="lazy" />
-              <span className="card-number">{String(index + 1).padStart(2, "0")}</span>
-              <span className="card-label">{item.label}</span>
+
+        <div className="catalog-tools">
+          <label className="search-field">
+            <span>Search the catalog</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search titles, genres, or keywords"
+            />
+          </label>
+          <label className="select-field">
+            <span>Type</span>
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="All">All types</option>
+              <option value="Movie">Movies</option>
+              <option value="Series">Series</option>
+            </select>
+          </label>
+          <label className="select-field">
+            <span>Genre</span>
+            <select value={genreFilter} onChange={(event) => setGenreFilter(event.target.value)}>
+              <option value="All">All genres</option>
+              {genres.map((genre) => (
+                <option value={genre} key={genre}>
+                  {genre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-field">
+            <span>Sort by</span>
+            <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+              <option value="title">Title A–Z</option>
+              <option value="newest">Newest first</option>
+              <option value="rating">Highest rated</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="results-summary" aria-live="polite">
+          <p>
+            <strong>{filteredItems.length}</strong>{" "}
+            {filteredItems.length === 1 ? "title" : "titles"}
+          </p>
+          {(query || typeFilter !== "All" || genreFilter !== "All" || sortOrder !== "title") && (
+            <button type="button" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {filteredItems.length > 0 ? (
+          <div className="catalog-grid">
+          {filteredItems.map((item, index) => (
+            <button
+              className="title-card"
+              type="button"
+              key={item.slug}
+              onClick={() => setSelected(item)}
+              aria-label={`View details for ${item.title}`}
+            >
+              <span className="poster-wrap">
+                <Image
+                  src={item.poster ?? ""}
+                  alt=""
+                  fill
+                  sizes="(max-width: 720px) 50vw, (max-width: 980px) 33vw, 25vw"
+                  priority={index < 4}
+                />
+                <span className="card-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </span>
+              <span className="card-copy">
+                <strong>{item.title}</strong>
+                <span>{metadata(item) || item.type}</span>
+              </span>
             </button>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="empty-results">
+            <p className="eyebrow">No matches</p>
+            <h3>Try a wider search.</h3>
+            <p>No titles match the filters you selected.</p>
+            <button className="button" type="button" onClick={clearFilters}>
+              Reset catalog
+            </button>
+          </div>
+        )}
       </section>
 
-      <section className="about-section" id="about" aria-labelledby="about-title">
-        <p className="eyebrow">The idea</p>
-        <div className="about-grid">
-          <h2 id="about-title">Strange, playful, and impossible to scroll past.</h2>
-          <div>
-            <p>Hymecymeyseh is a visual lounge for moving images and memorable fragments. It keeps the original site&apos;s experimental energy while making the experience easier to explore on every screen.</p>
-            <a className="text-link" href="#top">Back to the beginning <span aria-hidden="true">↑</span></a>
-          </div>
-        </div>
+      <section className="membership-section" id="membership">
+        <p className="eyebrow">Keep watching</p>
+        <h2>The catalog is only the beginning.</h2>
+        <p>
+          Membership details and availability are coming next. For now, explore what is
+          in the collection and make a list of what you want to watch.
+        </p>
+        <button className="button button-muted" type="button" disabled>
+          Plans coming soon
+        </button>
       </section>
 
       <footer>
-        <img src="/media/logo.png" alt="Hymecymeyseh" />
-        <p>Adults only · Please view responsibly</p>
-        <p>© {new Date().getFullYear()} Hymecymeyseh</p>
+        <a className="wordmark" href="#top">
+          REEL<span>HOUSE</span>
+        </a>
+        <p>{catalog.total} catalog records · Updated from the media library</p>
       </footer>
 
       {selected && (
-        <div className="lightbox" role="dialog" aria-modal="true" aria-label={selected.label} onClick={() => setSelected(null)}>
-          <button className="lightbox-close" type="button" onClick={() => setSelected(null)} aria-label="Close image">Close ×</button>
-          <img src={selected.src} alt={selected.label} onClick={(event) => event.stopPropagation()} />
-          <p>{selected.label}</p>
+        <div className="dialog-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
+          <section
+            className="title-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="dialog-close"
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label="Close title details"
+            >
+              ×
+            </button>
+            <Image
+              src={selected.poster ?? ""}
+              alt={`${selected.title} poster`}
+              width={900}
+              height={1350}
+            />
+            <div className="dialog-copy">
+              <p className="eyebrow">{selected.type}</p>
+              <h2 id="dialog-title">{selected.title}</h2>
+              <p className="hero-meta">{metadata(selected)}</p>
+              {selected.tagline && <p className="tagline">“{selected.tagline}”</p>}
+              <p>{selected.overview ?? "More information about this title is coming soon."}</p>
+              {selected.genres.length > 0 && (
+                <ul className="genre-list" aria-label="Genres">
+                  {selected.genres.slice(0, 4).map((genre) => (
+                    <li key={genre}>{genre}</li>
+                  ))}
+                </ul>
+              )}
+              <a className="button" href="#membership" onClick={() => setSelected(null)}>
+                View membership
+              </a>
+            </div>
+          </section>
         </div>
       )}
     </main>
