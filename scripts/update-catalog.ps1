@@ -3,14 +3,14 @@ $ErrorActionPreference = "Stop"
 function Invoke-Checked {
   param(
     [Parameter(Mandatory = $true)]
-    [string] $Command,
+    [string] $Executable,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]] $Arguments
   )
 
-  & $Command @Arguments
+  & $Executable @Arguments
   if ($LASTEXITCODE -ne 0) {
-    throw "$Command failed with exit code $LASTEXITCODE."
+    throw "$Executable failed with exit code $LASTEXITCODE."
   }
 }
 
