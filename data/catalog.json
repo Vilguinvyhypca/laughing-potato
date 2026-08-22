@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-21T23:38:25.403Z",
+  "generatedAt": "2026-08-22T01:34:47.447Z",
   "source": "Sanitized Jellyfin catalog snapshot",
-  "total": 53,
+  "total": 43,
   "items": [
     {
       "slug": "21-2008",
@@ -378,26 +378,6 @@
       "title": "Hoppers",
       "type": "Movie",
       "year": 2026,
-      "rating": 8.2,
-      "runtimeMinutes": 104,
-      "contentRating": "PG",
-      "genres": [
-        "Adventure",
-        "Animation",
-        "Comedy",
-        "Family",
-        "Science Fiction"
-      ],
-      "tagline": "Act natural.",
-      "overview": "Scientists have discovered how to 'hop' human consciousness into lifelike robotic animals, allowing people to communicate with animals as animals. Animal lover Mabel seizes an opportunity to use the technology, uncovering mysteries within the animal world beyond anything she could have imagined.",
-      "studio": "Pixar",
-      "poster": "/catalog/hoppers-2026.jpg"
-    },
-    {
-      "slug": "hoppers-2026-2",
-      "title": "Hoppers",
-      "type": "Movie",
-      "year": 2026,
       "rating": 8.169,
       "runtimeMinutes": 105,
       "contentRating": "PG",
@@ -411,7 +391,7 @@
       "tagline": "Act natural.",
       "overview": "Scientists have discovered how to 'hop' human consciousness into lifelike robotic animals, allowing people to communicate with animals as animals. Animal lover Mabel seizes an opportunity to use the technology, uncovering mysteries within the animal world beyond anything she could have imagined.",
       "studio": "Pixar",
-      "poster": "/catalog/hoppers-2026-2.jpg"
+      "poster": "/catalog/hoppers-2026.jpg"
     },
     {
       "slug": "how-i-met-your-mother-2005",
@@ -536,36 +516,6 @@
       "overview": "Pennsylvania, 1993. After getting caught with another girl, teenager Cameron Post is sent to a conversion therapy center run by the strict Dr. Lydia Marsh and her brother, Reverend Rick, whose treatment consists in repenting for feeling “same sex attraction.” Cameron befriends fellow sinners Jane and Adam, thus creating a new family to deal with the surrounding intolerance.",
       "studio": "Beachside Films",
       "poster": "/catalog/the-miseducation-of-cameron-post-2018.jpg"
-    },
-    {
-      "slug": "the-miseducation-of-cameron-post-2018-2",
-      "title": "The Miseducation of Cameron Post",
-      "type": "Movie",
-      "year": 2018,
-      "rating": 6.888,
-      "runtimeMinutes": 92,
-      "contentRating": "NR",
-      "genres": [
-        "Drama"
-      ],
-      "tagline": "Come as you are.",
-      "overview": "Pennsylvania, 1993. After getting caught with another girl, teenager Cameron Post is sent to a conversion therapy center run by the strict Dr. Lydia Marsh and her brother, Reverend Rick, whose treatment consists in repenting for feeling “same sex attraction.” Cameron befriends fellow sinners Jane and Adam, thus creating a new family to deal with the surrounding intolerance.",
-      "studio": "Beachside Films",
-      "poster": "/catalog/the-miseducation-of-cameron-post-2018-2.jpg"
-    },
-    {
-      "slug": "missing-at-end-before-credits-24-sec-scene-deadpool-end-mask-2024",
-      "title": "missing at end before credits 24 sec scene deadpool end mask",
-      "type": "Movie",
-      "year": 2024,
-      "rating": null,
-      "runtimeMinutes": 0,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/missing-at-end-before-credits-24-sec-scene-deadpool-end-mask-2024.jpg"
     },
     {
       "slug": "monster-2004",
@@ -707,104 +657,6 @@
       "overview": "Hundreds of cash-strapped players accept a strange invitation to compete in children's games. Inside, a tempting prize awaits — with deadly high stakes.",
       "studio": "Netflix",
       "poster": "/catalog/squid-game-2021.jpg"
-    },
-    {
-      "slug": "squid-game-s02e01-bread-and-lottery-1080p-nf-multi-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E01.Bread.and.Lottery.1080p.NF.MULTI.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 65,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e01-bread-and-lottery-1080p-nf-multi-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e02-halloween-party-1080p-nf-multi-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E02.Halloween.Party.1080p.NF.MULTI.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 52,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e02-halloween-party-1080p-nf-multi-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e03-001-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E03.001.1080p.MULTI.NF.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 62,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e03-001-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e04-six-legs-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E04.Six.Legs.1080p.MULTI.NF.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 63,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e04-six-legs-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e05-one-more-game-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E05.One.More.Game.1080p.MULTI.NF.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 76,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e05-one-more-game-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e06-o-x-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E06.O.X.1080p.MULTI.NF.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 52,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e06-o-x-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025.jpg"
-    },
-    {
-      "slug": "squid-game-s02e07-friend-or-foe-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025",
-      "title": "Squid.Game.S02E07.Friend.or.Foe.1080p.MULTI.NF.WEB-DL.DDP5.1.h264-SPWEB",
-      "type": "Movie",
-      "year": 2025,
-      "rating": null,
-      "runtimeMinutes": 60,
-      "contentRating": null,
-      "genres": [],
-      "tagline": "",
-      "overview": "",
-      "studio": null,
-      "poster": "/catalog/squid-game-s02e07-friend-or-foe-1080p-multi-nf-web-dl-ddp5-1-h264-spweb-2025.jpg"
     },
     {
       "slug": "to-your-eternity-2021",
